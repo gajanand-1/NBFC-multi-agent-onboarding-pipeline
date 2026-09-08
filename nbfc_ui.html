@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NBFC Onboarding — Multi-Agent Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --navy:#080e1f;
+  --navy-2:#0d1630;
+  --navy-3:#111d3c;
+  --navy-4:#182448;
+  --indigo:#4f63ff;
+  --indigo-dim:#2d3db0;
+  --indigo-glow:rgba(79,99,255,.18);
+  --cyan:#00e5ff;
+  --cyan-dim:rgba(0,229,255,.12);
+  --green:#00e096;
+  --amber:#ffb930;
+  --red:#ff5252;
+  --text-primary:#e8eaf6;
+  --text-secondary:#7e8dab;
+  --text-muted:#3d4d6a;
+  --border:#1e2d50;
+  --border-bright:#2a3f72;
+  --card:#0d1630;
+  --radius:12px;
+  --radius-sm:8px;
+}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--navy);
+  color:var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ─── grid noise bg ─── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%,rgba(79,99,255,.15) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%,rgba(0,229,255,.08) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* ─── layout ─── */
+.shell{position:relative;z-index:1;display:grid;grid-template-rows:auto 1fr;min-height:100vh}
+
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 40px;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,14,31,.8);
+  backdrop-filter:blur(16px);
+  position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--indigo),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;
+  box-shadow:0 0 24px var(--indigo-glow);
+}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.logo-sub{font-size:11px;color:var(--text-secondary);letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
+.badge{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;padding:4px 10px;border-radius:20px;
+  background:rgba(0,224,150,.1);color:var(--green);
+  border:1px solid rgba(0,224,150,.2);
+}
+
+.main{display:grid;grid-template-columns:1fr 320px;gap:0;align-items:start}
+
+/* ─── left panel ─── */
+.left{padding:36px 40px;display:flex;flex-direction:column;gap:28px}
+
+.section-label{
+  font-size:10px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-secondary);
+  margin-bottom:14px;
+}
+
+/* ─── form row ─── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:12px;color:var(--text-secondary);font-weight:500}
+.form-group input,.form-group select{
+  background:var(--navy-3);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text-primary);
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  padding:10px 14px;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.form-group input:focus,.form-group select:focus{
+  border-color:var(--indigo);
+  box-shadow:0 0 0 3px var(--indigo-glow);
+}
+.form-group input::placeholder{color:var(--text-muted)}
+.form-group select option{background:var(--navy-3)}
+
+/* ─── upload zones ─── */
+.upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.upload-zone{
+  border:1.5px dashed var(--border-bright);
+  border-radius:var(--radius);
+  padding:24px 16px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  cursor:pointer;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+  background:rgba(13,22,48,.6);
+  position:relative;
+  text-align:center;
+}
+.upload-zone:hover{
+  border-color:var(--indigo);
+  background:var(--indigo-glow);
+  box-shadow:0 0 20px var(--indigo-glow);
+}
+.upload-zone.dragover{
+  border-color:var(--cyan);
+  background:var(--cyan-dim);
+  box-shadow:0 0 28px rgba(0,229,255,.2);
+}
+.upload-zone.uploaded{
+  border-color:var(--green);
+  border-style:solid;
+  background:rgba(0,224,150,.06);
+}
+.upload-zone input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.upload-icon{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  background:var(--navy-4);
+  border:1px solid var(--border);
+  transition:background .2s;
+}
+.upload-zone.uploaded .upload-icon{background:rgba(0,224,150,.12);border-color:rgba(0,224,150,.3)}
+.upload-label{font-size:13px;font-weight:500;color:var(--text-primary)}
+.upload-hint{font-size:11px;color:var(--text-secondary)}
+.upload-filename{
+  font-size:11px;font-family:'JetBrains Mono',monospace;
+  color:var(--green);display:none;word-break:break-all;
+}
+.upload-zone.uploaded .upload-filename{display:block}
+.upload-zone.uploaded .upload-hint{display:none}
+
+/* ─── run button ─── */
+.run-btn{
+  width:100%;padding:16px;border:none;border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--indigo) 0%,#6a3de8 100%);
+  color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:opacity .2s,box-shadow .2s,transform .1s;
+  box-shadow:0 4px 24px rgba(79,99,255,.35);
+  letter-spacing:-.01em;
+}
+.run-btn:hover{box-shadow:0 6px 32px rgba(79,99,255,.5);transform:translateY(-1px)}
+.run-btn:active{transform:translateY(0)}
+.run-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.run-btn .spinner{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;display:none;
+}
+.run-btn.loading .spinner{display:block}
+.run-btn.loading .btn-icon{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── log panel ─── */
+.log-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.log-header{
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.log-header-left{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted)}
+.dot.active{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.log-body{
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;line-height:1.7;
+  padding:16px 18px;
+  max-height:340px;overflow-y:auto;
+  scroll-behavior:smooth;
+}
+.log-body::-webkit-scrollbar{width:4px}
+.log-body::-webkit-scrollbar-track{background:transparent}
+.log-body::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:4px}
+
+.log-line{display:flex;gap:10px;margin-bottom:2px;animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.log-time{color:var(--text-muted);flex-shrink:0;user-select:none}
+.log-msg{color:var(--text-secondary)}
+.log-msg.info{color:var(--text-primary)}
+.log-msg.tool{color:var(--cyan)}
+.log-msg.result{color:var(--green)}
+.log-msg.error{color:var(--red)}
+.log-msg.agent{color:var(--indigo);font-weight:500}
+.log-msg.decision{color:var(--amber);font-weight:500}
+.log-empty{color:var(--text-muted);font-style:italic;padding:20px 0;text-align:center}
+
+/* ─── result card ─── */
+.result-card{
+  border-radius:var(--radius);
+  padding:20px 22px;
+  border:1px solid;
+  display:none;
+  animation:fadein .4s ease;
+}
+.result-card.approve{
+  background:rgba(0,224,150,.07);
+  border-color:rgba(0,224,150,.25);
+}
+.result-card.reject{
+  background:rgba(255,82,82,.07);
+  border-color:rgba(255,82,82,.25);
+}
+.result-card.manual{
+  background:rgba(255,185,48,.07);
+  border-color:rgba(255,185,48,.25);
+}
+.result-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  padding:4px 12px;border-radius:20px;margin-bottom:12px;
+}
+.approve .result-badge{background:rgba(0,224,150,.15);color:var(--green)}
+.reject  .result-badge{background:rgba(255,82,82,.15);color:var(--red)}
+.manual  .result-badge{background:rgba(255,185,48,.15);color:var(--amber)}
+.result-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.result-sub{font-size:13px;color:var(--text-secondary);line-height:1.6}
+
+/* ─── right panel — pipeline tracker ─── */
+.right{
+  border-left:1px solid var(--border);
+  min-height:calc(100vh - 73px);
+  padding:36px 28px;
+  display:flex;flex-direction:column;gap:0;
+  position:sticky;top:73px;
+  background:rgba(8,14,31,.5);
+}
+
+.pipeline-title{
+  font-size:10px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-secondary);
+  margin-bottom:32px;
+}
+
+.agent-card{
+  position:relative;
+  padding:18px 18px 18px 56px;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--navy-2);
+  transition:border-color .3s,box-shadow .3s,background .3s;
+  margin-bottom:0;
+}
+.agent-card.active{
+  border-color:var(--indigo);
+  background:var(--navy-3);
+  box-shadow:0 0 24px var(--indigo-glow),inset 0 0 24px var(--indigo-glow);
+}
+.agent-card.done{
+  border-color:rgba(0,224,150,.3);
+  background:rgba(0,224,150,.04);
+}
+.agent-card.error{
+  border-color:rgba(255,82,82,.3);
+}
+
+/* connector between cards */
+.connector{
+  width:1px;height:28px;
+  background:var(--border);
+  margin:0 0 0 27px;
+  position:relative;
+  transition:background .4s;
+}
+.connector.lit{background:var(--green)}
+.connector::after{
+  content:'';position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:inherit;
+  filter:blur(3px);
+  opacity:0;transition:opacity .4s;
+}
+.connector.lit::after{opacity:1}
+
+.agent-num{
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;
+  background:var(--navy-4);
+  border:1.5px solid var(--border-bright);
+  color:var(--text-secondary);
+  transition:all .3s;
+}
+.agent-card.active .agent-num{
+  background:var(--indigo);border-color:var(--indigo);
+  color:#fff;box-shadow:0 0 16px var(--indigo-glow);
+}
+.agent-card.done .agent-num{
+  background:var(--green);border-color:var(--green);
+  color:#080e1f;
+}
+
+.agent-name{font-size:13px;font-weight:600;margin-bottom:3px}
+.agent-role{font-size:11px;color:var(--text-secondary)}
+.agent-status{
+  font-size:11px;font-family:'JetBrains Mono',monospace;
+  color:var(--text-muted);margin-top:8px;
+}
+.agent-card.active .agent-status{color:var(--cyan)}
+.agent-card.done  .agent-status{color:var(--green)}
+
+.agent-tools{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;
+}
+.tool-chip{
+  font-size:10px;font-family:'JetBrains Mono',monospace;
+  padding:3px 8px;border-radius:4px;
+  background:var(--navy-4);border:1px solid var(--border);
+  color:var(--text-muted);
+  transition:all .3s;
+}
+.agent-card.active .tool-chip.active-tool{
+  background:rgba(0,229,255,.1);
+  border-color:rgba(0,229,255,.3);
+  color:var(--cyan);
+}
+
+/* ─── stats row ─── */
+.stats-row{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  margin-top:auto;padding-top:28px;
+}
+.stat{
+  background:var(--navy-3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px;text-align:center;
+}
+.stat-val{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.stat-key{font-size:10px;color:var(--text-secondary);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ─── scrollbar global ─── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:4px}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── header ── -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">N</div>
+    <div>
+      <div class="logo-text">NBFC Intelligence</div>
+      <div class="logo-sub">Multi-Agent Onboarding</div>
+    </div>
+  </div>
+  <span class="badge" id="system-badge">● System Ready</span>
+</header>
+
+<div class="main">
+
+<!-- ── LEFT ── -->
+<div class="left">
+
+  <!-- applicant info -->
+  <div>
+    <div class="section-label">Applicant Information</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="f-name" placeholder="Gajanand Kumar Sah"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="f-email" placeholder="gajanand@email.com"/>
+      </div>
+      <div class="form-group">
+        <label>Monthly Income (₹)</label>
+        <input type="number" id="f-income" placeholder="50000"/>
+      </div>
+      <div class="form-group">
+        <label>Existing EMIs (₹)</label>
+        <input type="number" id="f-emis" placeholder="20000"/>
+      </div>
+      <div class="form-group">
+        <label>Loan Amount Requested (₹)</label>
+        <input type="number" id="f-loan" placeholder="500000"/>
+      </div>
+      <div class="form-group">
+        <label>Employment Type</label>
+        <select id="f-emp">
+          <option value="SALARIED">Salaried</option>
+          <option value="SELF_EMPLOYED">Self-Employed</option>
+          <option value="UNEMPLOYED">Unemployed</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- document upload -->
+  <div>
+    <div class="section-label">KYC Documents</div>
+    <div class="upload-grid">
+      <div class="upload-zone" id="zone-pan" ondragover="onDrag(event,'zone-pan')" ondragleave="offDrag('zone-pan')" ondrop="onDrop(event,'zone-pan','file-pan')">
+        <input type="file" id="file-pan" accept=".jpg,.jpeg,.png,.pdf" onchange="fileChosen('zone-pan',this)"/>
+        <div class="upload-icon">🪪</div>
+        <div class="upload-label">PAN Card</div>
+        <div class="upload-hint">JPG, PNG or PDF</div>
+        <div class="upload-filename" id="name-pan"></div>
+      </div>
+      <div class="upload-zone" id="zone-aadhaar" ondragover="onDrag(event,'zone-aadhaar')" ondragleave="offDrag('zone-aadhaar')" ondrop="onDrop(event,'zone-aadhaar','file-aadhaar')">
+        <input type="file" id="file-aadhaar" accept=".jpg,.jpeg,.png,.pdf" onchange="fileChosen('zone-aadhaar',this)"/>
+        <div class="upload-icon">🪪</div>
+        <div class="upload-label">Aadhaar Card</div>
+        <div class="upload-hint">JPG, PNG or PDF</div>
+        <div class="upload-filename" id="name-aadhaar"></div>
+      </div>
+      <div class="upload-zone" id="zone-bank" ondragover="onDrag(event,'zone-bank')" ondragleave="offDrag('zone-bank')" ondrop="onDrop(event,'zone-bank','file-bank')">
+        <input type="file" id="file-bank" accept=".pdf" onchange="fileChosen('zone-bank',this)"/>
+        <div class="upload-icon">🏦</div>
+        <div class="upload-label">Bank Statement</div>
+        <div class="upload-hint">PDF only (last 3 months)</div>
+        <div class="upload-filename" id="name-bank"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- run button -->
+  <button class="run-btn" id="run-btn" onclick="runPipeline()">
+    <div class="spinner"></div>
+    <span class="btn-icon">⚡</span>
+    <span id="btn-label">Run Multi-Agent Pipeline</span>
+  </button>
+
+  <!-- result card -->
+  <div class="result-card" id="result-card">
+    <div class="result-badge" id="result-badge"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-sub" id="result-sub"></div>
+  </div>
+
+  <!-- activity log -->
+  <div>
+    <div class="section-label">Live Agent Activity</div>
+    <div class="log-card">
+      <div class="log-header">
+        <div class="log-header-left">
+          <div class="dot" id="log-dot"></div>
+          <span id="log-status">Waiting to start</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);cursor:pointer" onclick="clearLog()">Clear</span>
+      </div>
+      <div class="log-body" id="log-body">
+        <div class="log-empty">Pipeline output will appear here once you start.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /left -->
+
+<!-- ── RIGHT — pipeline tracker ── -->
+<div class="right">
+  <div class="pipeline-title">Agent Pipeline</div>
+
+  <div class="agent-card" id="ac-1">
+    <div class="agent-num">1</div>
+    <div class="agent-name">Document Verifier</div>
+    <div class="agent-role">KYC extraction &amp; validation</div>
+    <div class="agent-tools">
+      <span class="tool-chip" id="tc-ocr">extract_text</span>
+      <span class="tool-chip" id="tc-name">verify_name</span>
+      <span class="tool-chip" id="tc-rec">check_recency</span>
+    </div>
+    <div class="agent-status" id="as-1">Idle</div>
+  </div>
+
+  <div class="connector" id="conn-1"></div>
+
+  <div class="agent-card" id="ac-2">
+    <div class="agent-num">2</div>
+    <div class="agent-name">Risk Assessor</div>
+    <div class="agent-role">Credit scoring &amp; underwriting</div>
+    <div class="agent-tools">
+      <span class="tool-chip" id="tc-dti">calc_dti</span>
+      <span class="tool-chip" id="tc-cibil">fetch_cibil</span>
+    </div>
+    <div class="agent-status" id="as-2">Waiting for Agent 1</div>
+  </div>
+
+  <div class="connector" id="conn-2"></div>
+
+  <div class="agent-card" id="ac-3">
+    <div class="agent-num">3</div>
+    <div class="agent-name">Customer Communicator</div>
+    <div class="agent-role">Email drafting &amp; dispatch</div>
+    <div class="agent-tools">
+      <span class="tool-chip" id="tc-email">send_email</span>
+    </div>
+    <div class="agent-status" id="as-3">Waiting for Agent 2</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-val" id="stat-time">—</div>
+      <div class="stat-key">Seconds</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-tools">—</div>
+      <div class="stat-key">Tool Calls</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-docs">0/3</div>
+      <div class="stat-key">Docs Ready</div>
+    </div>
+  </div>
+</div><!-- /right -->
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ── state ──────────────────────────────────────────
+let docsReady = {pan:false, aadhaar:false, bank:false};
+let toolCallCount = 0;
+let startTime = null;
+let timerInterval = null;
+let logEmpty = true;
+
+// ── upload handlers ────────────────────────────────
+function onDrag(e,zoneId){e.preventDefault();document.getElementById(zoneId).classList.add('dragover')}
+function offDrag(zoneId){document.getElementById(zoneId).classList.remove('dragover')}
+function onDrop(e,zoneId,inputId){
+  e.preventDefault();offDrag(zoneId);
+  const file = e.dataTransfer.files[0];
+  if(!file) return;
+  const inp = document.getElementById(inputId);
+  const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
+  fileChosen(zoneId,inp);
+}
+function fileChosen(zoneId,inp){
+  const key = zoneId.replace('zone-','');
+  const file = inp.files[0];
+  if(!file) return;
+  document.getElementById(zoneId).classList.add('uploaded');
+  document.getElementById('name-'+key).textContent = file.name;
+  docsReady[key] = true;
+  const count = Object.values(docsReady).filter(Boolean).length;
+  document.getElementById('stat-docs').textContent = count+'/3';
+  addLog('Uploaded: '+file.name, 'result');
+}
+
+// ── log helpers ────────────────────────────────────
+function addLog(msg, type='info'){
+  const body = document.getElementById('log-body');
+  if(logEmpty){body.innerHTML='';logEmpty=false;}
+  const now = new Date();
+  const t = now.toTimeString().slice(0,8);
+  const line = document.createElement('div');
+  line.className='log-line';
+  line.innerHTML=`<span class="log-time">${t}</span><span class="log-msg ${type}">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+function clearLog(){
+  document.getElementById('log-body').innerHTML='<div class="log-empty">Pipeline output will appear here once you start.</div>';
+  logEmpty=true;
+}
+
+// ── agent tracker ──────────────────────────────────
+function setAgentState(n, state, statusText){
+  const card = document.getElementById('ac-'+n);
+  const stat = document.getElementById('as-'+n);
+  card.classList.remove('active','done','error');
+  if(state) card.classList.add(state);
+  stat.textContent = statusText;
+}
+function litConnector(n){ document.getElementById('conn-'+n).classList.add('lit') }
+function setSystemBadge(txt,color){
+  const b=document.getElementById('system-badge');
+  b.textContent='● '+txt;
+  b.style.color=color||'var(--green)';
+  b.style.background=color?'rgba(255,82,82,.1)':'rgba(0,224,150,.1)';
+  b.style.borderColor=color?'rgba(255,82,82,.2)':'rgba(0,224,150,.2)';
+}
+function setLogStatus(txt, active=false){
+  document.getElementById('log-status').textContent=txt;
+  document.getElementById('log-dot').classList.toggle('active',active);
+}
+
+// ── timer ──────────────────────────────────────────
+function startTimer(){
+  startTime=Date.now();
+  timerInterval=setInterval(()=>{
+    document.getElementById('stat-time').textContent=((Date.now()-startTime)/1000).toFixed(1);
+  },100);
+}
+function stopTimer(){
+  clearInterval(timerInterval);
+  document.getElementById('stat-time').textContent=((Date.now()-startTime)/1000).toFixed(1);
+}
+
+// ── reset ──────────────────────────────────────────
+function resetPipeline(){
+  [1,2,3].forEach(n=>{
+    document.getElementById('ac-'+n).classList.remove('active','done','error');
+  });
+  document.getElementById('conn-1').classList.remove('lit');
+  document.getElementById('conn-2').classList.remove('lit');
+  document.getElementById('as-1').textContent='Idle';
+  document.getElementById('as-2').textContent='Waiting for Agent 1';
+  document.getElementById('as-3').textContent='Waiting for Agent 2';
+  document.getElementById('result-card').style.display='none';
+  toolCallCount=0;
+  document.getElementById('stat-tools').textContent='—';
+}
+
+// ── tool call visual ───────────────────────────────
+function flashTool(chipId){
+  const chip = document.getElementById(chipId);
+  if(!chip) return;
+  chip.classList.add('active-tool');
+  setTimeout(()=>chip.classList.remove('active-tool'),2000);
+}
+
+// ── show result ────────────────────────────────────
+function showResult(decision, reasoning, kycFailed){
+  const card = document.getElementById('result-card');
+  const badge = document.getElementById('result-badge');
+  const title = document.getElementById('result-title');
+  const sub   = document.getElementById('result-sub');
+  card.className='result-card';
+  if(decision==='APPROVE'){
+    card.classList.add('approve');
+    badge.textContent='✓ Approved';
+    title.textContent='Loan application approved';
+    sub.textContent='The applicant meets all KYC and credit criteria. Welcome email has been dispatched.';
+  } else if(decision==='REJECT'){
+    card.classList.add('reject');
+    badge.textContent='✗ Rejected';
+    title.textContent='Application could not be processed';
+    sub.textContent = kycFailed
+      ? 'The application was rejected during KYC verification, before risk assessment. No notification email is sent at this stage.'
+      : 'The application did not meet the required risk criteria. A decline email has been sent.';
+  } else {
+    card.classList.add('manual');
+    badge.textContent='⏳ Manual Review';
+    title.textContent='Escalated for human review';
+    sub.textContent='Borderline risk profile detected. Assigned to the credit team for manual assessment.';
+  }
+  card.style.display='block';
+}
+
+// ── main pipeline simulation ───────────────────────
+// In production this calls your FastAPI backend running main.py
+// Here we simulate the agent sequence with realistic timing and logs.
+async function runPipeline(){
+  const name   = document.getElementById('f-name').value   || 'Valued Customer';
+  const email  = document.getElementById('f-email').value  || '';
+  const income = +document.getElementById('f-income').value || 0;
+  const emis   = +document.getElementById('f-emis').value  || 0;
+  const loan   = +document.getElementById('f-loan').value  || 0;
+  const emp    = document.getElementById('f-emp').value;
+
+  // Validate
+  if(!email) { addLog('Please enter applicant email address.','error'); return; }
+  if(!income){ addLog('Please enter monthly income.','error'); return; }
+  if(!docsReady.pan)     { addLog('Please upload PAN card.','error'); return; }
+  if(!docsReady.aadhaar) { addLog('Please upload Aadhaar card.','error'); return; }
+  if(!docsReady.bank)    { addLog('Please upload bank statement.','error'); return; }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled=true; btn.classList.add('loading');
+  document.getElementById('btn-label').textContent='Running Pipeline...';
+  resetPipeline(); clearLog(); toolCallCount=0;
+  startTimer(); setLogStatus('Pipeline running…', true);
+  setSystemBadge('Pipeline Active','var(--cyan)');
+
+  // ── Visual: Agent 1 activates while real API runs ───────────
+  setAgentState(1,'active','Extracting documents…');
+  addLog('▶ AGENT 1 — Document Verifier started','agent');
+  addLog('🔧 extract_text_from_file ← PAN','tool');       flashTool('tc-ocr'); bumpTools();
+  addLog('🔧 extract_text_from_file ← Aadhaar','tool');   flashTool('tc-ocr'); bumpTools();
+  addLog('🔧 extract_text_from_file ← Bank statement','tool'); flashTool('tc-ocr'); bumpTools();
+  addLog('🔧 verify_name_match ← PAN vs Aadhaar','tool'); flashTool('tc-name'); bumpTools();
+  addLog('🔧 verify_address_and_recency ← statement date','tool'); flashTool('tc-rec'); bumpTools();
+  addLog('⏳ Processing — waiting for backend…','info');
+
+  // ── Build FormData and call the real backend ─────────────────
+  const fd = new FormData();
+  fd.append('pan',                   document.getElementById('file-pan').files[0]);
+  fd.append('aadhaar',               document.getElementById('file-aadhaar').files[0]);
+  fd.append('bank_statement',        document.getElementById('file-bank').files[0]);
+  fd.append('customer_email',        email);
+  fd.append('monthly_income',        income);
+  fd.append('existing_emis',         emis);
+  fd.append('requested_loan_amount', loan);
+  fd.append('employment_type',       emp);
+
+  let result;
+  try {
+    const resp = await fetch('/run', { method: 'POST', body: fd });
+    if(!resp.ok){
+      const err = await resp.text();
+      addLog('Backend error: '+err,'error');
+      setSystemBadge('Error','var(--red)');
+      btn.disabled=false; btn.classList.remove('loading');
+      document.getElementById('btn-label').textContent='Retry';
+      stopTimer(); setLogStatus('Failed', false);
+      return;
+    }
+    result = await resp.json();
+  } catch(e){
+    addLog('Could not reach backend: '+e.message,'error');
+    setSystemBadge('Offline','var(--red)');
+    btn.disabled=false; btn.classList.remove('loading');
+    document.getElementById('btn-label').textContent='Retry';
+    stopTimer(); setLogStatus('Failed', false);
+    return;
+  }
+
+  // ── Agent 1 done — show real extracted data ──────────────────
+  const kycFailed = !!result.kyc_failed;
+  setAgentState(1, kycFailed?'error':'done', kycFailed?'KYC failed ✗':'KYC verified ✓');
+  addLog(kycFailed ? '✗ Agent 1 — KYC verification FAILED' : '✓ Agent 1 complete — documents verified', kycFailed?'error':'result');
+  if(result.reasons && result.reasons.length>0)
+    result.reasons.forEach(r => addLog('   ⚠ '+r,'error'));
+  litConnector(1);
+
+  if(kycFailed){
+    // Fast-path rejection — the backend graph routes straight to END here,
+    // so Agent 2 (Risk Assessor) and Agent 3 (Customer Communicator) never run.
+    setAgentState(2,'','Skipped — KYC failed');
+    setAgentState(3,'','Skipped — KYC failed');
+    addLog('⏭ Agents 2 & 3 skipped — application rejected at KYC stage','info');
+  } else {
+    // ── Agent 2 done — show real risk numbers ────────────────────
+    setAgentState(2,'active','Assessing risk…');
+    addLog('▶ AGENT 2 — Risk Assessor started','agent');
+    addLog('🔧 calculate_financial_ratios ← income:'+income+' emis:'+emis,'tool');
+    flashTool('tc-dti'); bumpTools();
+    const dtiPct = result.dti_ratio ? (result.dti_ratio*100).toFixed(1)+'%' : '—';
+    addLog('   → DTI ratio: '+dtiPct+' | CIBIL: '+result.cibil_score,'result');
+    addLog('🔧 fetch_cibil_score ← Supabase','tool');
+    flashTool('tc-cibil'); bumpTools();
+    addLog('🔧 credit_underwriting (RAG) ← Guidelines/ policy','tool'); bumpTools();
+    addLog('📊 Underwriting decision: '+result.decision,'decision');
+    setAgentState(2,'done','Risk assessed ✓');
+    addLog('✓ Agent 2 complete — '+result.decision+' issued','result');
+    litConnector(2);
+
+    // ── Agent 3 done — show email status ─────────────────────────
+    setAgentState(3,'active','Drafting email…');
+    addLog('▶ AGENT 3 — Customer Communicator started','agent');
+    addLog('✍  LLM drafted personalised '+result.decision.toLowerCase()+' email','info');
+    addLog('🔧 send_customer_email ← to:'+email,'tool');
+    flashTool('tc-email'); bumpTools();
+    const emailStatus = result.email_sent ? '✓ sent | HTTP 202' : '✗ failed — check SendGrid config';
+    addLog('   → '+emailStatus, result.email_sent?'result':'error');
+    setAgentState(3,'done','Email dispatched ✓');
+    addLog('✓ Agent 3 complete — communication sent','result');
+  }
+
+  // ── Done ─────────────────────────────────────────────────────
+  stopTimer();
+  setLogStatus('Pipeline complete', false);
+  setSystemBadge('Ready');
+  addLog('━━ Pipeline finished in '+document.getElementById('stat-time').textContent+'s ━━','decision');
+
+  // Update stat cards with real numbers
+  if(result.cibil_score) document.getElementById('stat-tools').textContent = toolCallCount;
+
+  btn.disabled=false; btn.classList.remove('loading');
+  document.getElementById('btn-label').textContent='Run Again';
+
+  showResult(result.decision, result.reasoning, kycFailed);
+}
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)) }
+function bumpTools(){ document.getElementById('stat-tools').textContent=++toolCallCount }
+function daysAgo(n){
+  const d=new Date(Date.now()-n*864e5);
+  return d.toISOString().slice(0,10);
+}
+</script>
+</body>
+</html>

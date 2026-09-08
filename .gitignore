@@ -1,0 +1,12 @@
+# Secrets
+.env
+
+# Real customer PII / uploaded KYC documents
+documents/
+
+# Python
+__pycache__/
+*.pyc
+
+# Vector store / model caches (rebuilt on startup)
+.cache/

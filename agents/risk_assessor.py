@@ -12,7 +12,7 @@ import os
 from langchain_groq import ChatGroq
 
 from state.schema import VerificationState, CreditDecisionSchema
-from tools.risk_tools import call_credit_bureau_tool, policy_retriever
+from tools.risk_tools import call_credit_bureau_tool, get_policy_retriever
 
 
 llm = ChatGroq(model="openai/gpt-oss-120b", api_key=os.getenv("GROQ_API"))
@@ -63,7 +63,7 @@ def credit_underwriting_node(state: VerificationState) -> dict:
         f"DTI {state.get('debt_to_income_ratio', 0):.2%} "
         f"and loan ask {state.get('requested_loan_amount', 0)}."
     )
-    retrieved_docs = policy_retriever.invoke(search_query)
+    retrieved_docs = get_policy_retriever().invoke(search_query)
     policy_context = "\n\n".join([doc.page_content for doc in retrieved_docs])
     print(f"--- RETRIEVED POLICIES ---\n{policy_context}\n--------------------------")
 

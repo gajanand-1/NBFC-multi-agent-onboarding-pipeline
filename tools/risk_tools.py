@@ -43,8 +43,8 @@ def call_credit_bureau_tool(pan_number: str):
 
 # ── RAG policy retriever (from your cells 13,14) ────────────────
 
-def setup_policy_retriever():
-    """Loads all PDFs from Guidelines/ into FAISS. Called once at startup."""
+def _build_policy_retriever():
+    """Loads all PDFs from Guidelines/ into FAISS."""
     loader   = PyPDFDirectoryLoader("Guidelines")
     docs     = loader.load()
 
@@ -59,5 +59,15 @@ def setup_policy_retriever():
     return vectorstore.as_retriever(search_kwargs={"k": 10})
 
 
-# Initialised once when this module is first imported
-policy_retriever = setup_policy_retriever()
+# Built lazily on first use, not at import time — embedding the Guidelines/
+# PDFs is slow, and doing it at import time blocks the ASGI server from
+# binding its port until it finishes (fatal on slow/constrained hosts,
+# where it can exceed the platform's startup/port-scan timeout).
+_policy_retriever = None
+
+
+def get_policy_retriever():
+    global _policy_retriever
+    if _policy_retriever is None:
+        _policy_retriever = _build_policy_retriever()
+    return _policy_retriever
